@@ -1,3 +1,260 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:f2218ea9a75ac53ec85903ed572f105ca40e80c4bc076f769511ada11f1bdb3e
-size 6410
+{
+  "version": 1,
+  "feature_names": [
+    "action_entropy",
+    "actions_per_hand_mean",
+    "actions_per_hand_std",
+    "actions_total",
+    "actor_entropy",
+    "aggression_ratio",
+    "bet_bb_mean",
+    "bet_bb_std",
+    "bet_ratio",
+    "call_ratio",
+    "check_ratio",
+    "chunk_size",
+    "fold_ratio",
+    "players_mean",
+    "players_std",
+    "pot_mean",
+    "pot_std",
+    "raise_bb_mean",
+    "raise_bb_std",
+    "raise_ratio",
+    "showdown_rate",
+    "street_depth_mean",
+    "street_depth_std",
+    "street_entropy"
+  ],
+  "weights": {
+    "action_entropy": 0.02920311072190361,
+    "actions_per_hand_mean": 0.0,
+    "actions_per_hand_std": 0.0,
+    "actions_total": 0.03404103866302425,
+    "actor_entropy": 0.0034061426240731287,
+    "aggression_ratio": -0.007029061517337102,
+    "bet_bb_mean": -0.03844338381209919,
+    "bet_bb_std": -0.013838998181125379,
+    "bet_ratio": 0.04896542899369239,
+    "call_ratio": 0.041757339227346486,
+    "check_ratio": 0.025423047261125098,
+    "chunk_size": -0.0013593878038802916,
+    "fold_ratio": -0.030902540127533747,
+    "players_mean": 0.0007427236740372255,
+    "players_std": 0.02876269653462877,
+    "pot_mean": 0.0,
+    "pot_std": 0.0,
+    "raise_bb_mean": -0.03489162641244394,
+    "raise_bb_std": -0.05111185557245478,
+    "raise_ratio": 0.03348919066693,
+    "showdown_rate": 0.0,
+    "street_depth_mean": -0.0009751536693281211,
+    "street_depth_std": 0.011911710259895727,
+    "street_entropy": 0.0116036888775522
+  },
+  "class_stats": {
+    "human": {
+      "action_entropy": {
+        "mean": 1.1878428163238033,
+        "std": 0.21085147211898814
+      },
+      "actions_per_hand_mean": {
+        "mean": 12.0,
+        "std": 0.0
+      },
+      "actions_per_hand_std": {
+        "mean": 0.0,
+        "std": 0.0
+      },
+      "actions_total": {
+        "mean": 372.7275,
+        "std": 77.1691210507804
+      },
+      "actor_entropy": {
+        "mean": 1.6272243762092187,
+        "std": 0.23706269426165535
+      },
+      "aggression_ratio": {
+        "mean": 1.7456921819419506,
+        "std": 2.874816740836797
+      },
+      "bet_bb_mean": {
+        "mean": 29.80419511003028,
+        "std": 8.285215382881104
+      },
+      "bet_bb_std": {
+        "mean": 14.723110260302112,
+        "std": 8.248768813457977
+      },
+      "bet_ratio": {
+        "mean": 0.06093306384457318,
+        "std": 0.028536288627422225
+      },
+      "call_ratio": {
+        "mean": 0.0906869898449227,
+        "std": 0.039969575373070595
+      },
+      "check_ratio": {
+        "mean": 0.10183216487729392,
+        "std": 0.05475419959285944
+      },
+      "chunk_size": {
+        "mean": 60.29416666666667,
+        "std": 11.973970351233639
+      },
+      "fold_ratio": {
+        "mean": 0.5717305245840566,
+        "std": 0.12179067642588076
+      },
+      "players_mean": {
+        "mean": 4.806018346915745,
+        "std": 1.0675471034912314
+      },
+      "players_std": {
+        "mean": 0.8362237813428487,
+        "std": 0.6220397567402889
+      },
+      "pot_mean": {
+        "mean": 0.0,
+        "std": 0.0
+      },
+      "pot_std": {
+        "mean": 0.0,
+        "std": 0.0
+      },
+      "raise_bb_mean": {
+        "mean": 37.30918078706498,
+        "std": 9.555062783293069
+      },
+      "raise_bb_std": {
+        "mean": 26.678602002480197,
+        "std": 11.624112559004354
+      },
+      "raise_ratio": {
+        "mean": 0.17469067427665863,
+        "std": 0.06808842039237711
+      },
+      "showdown_rate": {
+        "mean": 0.0,
+        "std": 0.0
+      },
+      "street_depth_mean": {
+        "mean": 0.8831852761300168,
+        "std": 0.3797317556474287
+      },
+      "street_depth_std": {
+        "mean": 1.095090520865817,
+        "std": 0.2400396018012943
+      },
+      "street_entropy": {
+        "mean": 0.7223004579459501,
+        "std": 0.21901974934136856
+      }
+    },
+    "bot": {
+      "action_entropy": {
+        "mean": 1.5742923729522127,
+        "std": 0.013745550141222555
+      },
+      "actions_per_hand_mean": {
+        "mean": 12.0,
+        "std": 0.0
+      },
+      "actions_per_hand_std": {
+        "mean": 0.0,
+        "std": 0.0
+      },
+      "actions_total": {
+        "mean": 718.36,
+        "std": 142.5794880058138
+      },
+      "actor_entropy": {
+        "mean": 1.6454900011300146,
+        "std": 0.15895221712247426
+      },
+      "aggression_ratio": {
+        "mean": 1.3649912999944604,
+        "std": 0.21301404836791332
+      },
+      "bet_bb_mean": {
+        "mean": 14.484647170016194,
+        "std": 1.825436080265338
+      },
+      "bet_bb_std": {
+        "mean": 12.329013896149313,
+        "std": 4.091322671647658
+      },
+      "bet_ratio": {
+        "mean": 0.1908403750312937,
+        "std": 0.020782103529409707
+      },
+      "call_ratio": {
+        "mean": 0.15328818701006833,
+        "std": 0.018121969192972775
+      },
+      "check_ratio": {
+        "mean": 0.15262077212450256,
+        "std": 0.02054243685004919
+      },
+      "chunk_size": {
+        "mean": 59.86333333333334,
+        "std": 11.881624000484482
+      },
+      "fold_ratio": {
+        "mean": 0.28131958228380344,
+        "std": 0.02834865148815515
+      },
+      "players_mean": {
+        "mean": 4.824219209775991,
+        "std": 0.7493597188418161
+      },
+      "players_std": {
+        "mean": 1.2304938912523697,
+        "std": 0.3812651120257966
+      },
+      "pot_mean": {
+        "mean": 0.0,
+        "std": 0.0
+      },
+      "pot_std": {
+        "mean": 0.0,
+        "std": 0.0
+      },
+      "raise_bb_mean": {
+        "mean": 21.29425259000064,
+        "std": 2.0468586214833575
+      },
+      "raise_bb_std": {
+        "mean": 14.883624351509653,
+        "std": 3.967454671527558
+      },
+      "raise_ratio": {
+        "mean": 0.2218997500898265,
+        "std": 0.03151869321690858
+      },
+      "showdown_rate": {
+        "mean": 0.0,
+        "std": 0.0
+      },
+      "street_depth_mean": {
+        "mean": 0.875300954680494,
+        "std": 0.20245884897885805
+      },
+      "street_depth_std": {
+        "mean": 1.153684455910781,
+        "std": 0.10453232197281873
+      },
+      "street_entropy": {
+        "mean": 0.7760237921991062,
+        "std": 0.1129342446461978
+      }
+    }
+  },
+  "score_logic": {
+    "type": "linear_sigmoid_with_chunk_confidence",
+    "chunk_confidence_min": 0.65,
+    "chunk_confidence_max": 1.0,
+    "chunk_size_min": 40,
+    "chunk_size_max": 80
+  }
+}
