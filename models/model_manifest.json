@@ -1,0 +1,24 @@
+{
+    "schema_version": "1",
+    "open_source": true,
+    "model_name": "poker44_gen10heur1",
+    "model_version": "10.1",
+    "framework": "python-heuristic",
+    "license": "MIT",
+    "repo_url": "https://github.com/tomkaba/poker44-miner-gen10heur1",
+    "repo_commit": "206ac6daee9d066ad8233866401bacb957ab8c4e",
+    "inference_mode": "remote",
+    "training_data_statement": "Trained on public human corpus and offline-generated bot chunks. No validator-private data used.",
+    "training_data_sources": [
+        "hands_generator/human_hands/poker_hands_combined.json.gz"
+    ],
+    "data_attestation": "This miner does not train on validator-private human data.",
+    "private_data_attestation": "This miner does not train on validator-private human data.",
+    "implementation_files": [
+        "neurons/miner.py",
+        "poker44/miner_heuristics.py",
+        "models/benchmark_heuristic_profile.json"
+    ],
+    "implementation_sha256": "b38de249555c619dc0d390e6e02c510a94b41a648ffd42ef06ba66e2f9329333",
+    "notes": "Gen10heur1 profile-based heuristic miner."
+}

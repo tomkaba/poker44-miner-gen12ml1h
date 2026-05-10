@@ -1514,34 +1514,34 @@ def score_chunk(chunk: List[dict]) -> float:
 
 
 # ---------------------------------------------------------------------------
-# gen7heur1 – chunk-level heuristic scorer based on benchmark-derived profile
+# gen10heur1 – chunk-level heuristic scorer based on benchmark-derived profile
 # ---------------------------------------------------------------------------
 
-_GEN7HEUR1_PROFILE: Optional[dict] = None
-_GEN7HEUR1_PROFILE_LOCK = False  # simple re-entrancy guard
+_GEN10HEUR1_PROFILE: Optional[dict] = None
+_GEN10HEUR1_PROFILE_LOCK = False  # simple re-entrancy guard
 
-_GEN7HEUR1_STANDARD_ACTIONS: Set[str] = {"bet", "call", "check", "fold", "raise"}
+_GEN10HEUR1_STANDARD_ACTIONS: Set[str] = {"bet", "call", "check", "fold", "raise"}
 
 _EPS_G7 = 1e-9
 
 
-def _load_gen7heur1_profile() -> dict:
-    global _GEN7HEUR1_PROFILE
-    if _GEN7HEUR1_PROFILE is not None:
-        return _GEN7HEUR1_PROFILE
-    env_path = os.getenv("POKER44_GEN7HEUR1_PROFILE", "")
+def _load_gen10heur1_profile() -> dict:
+    global _GEN10HEUR1_PROFILE
+    if _GEN10HEUR1_PROFILE is not None:
+        return _GEN10HEUR1_PROFILE
+    env_path = os.getenv("POKER44_GEN10HEUR1_PROFILE", "")
     if env_path:
         profile_path = Path(env_path)
     else:
         profile_path = Path(__file__).resolve().parents[1] / "models" / "benchmark_heuristic_profile.json"
     import json as _json
     with open(profile_path, "r", encoding="utf-8") as _f:
-        _GEN7HEUR1_PROFILE = _json.load(_f)
-    return _GEN7HEUR1_PROFILE
+        _GEN10HEUR1_PROFILE = _json.load(_f)
+    return _GEN10HEUR1_PROFILE
 
 
-def _gen7heur1_extract_features(chunk: List[dict]) -> Dict[str, float]:
-    """Extract the same 24 chunk-level features used in the gen7heur1 profile.
+def _gen10heur1_extract_features(chunk: List[dict]) -> Dict[str, float]:
+    """Extract the same 24 chunk-level features used in the gen10heur1 profile.
 
     'other' action types are skipped entirely, matching the production-data
     distribution where both bots and humans generate other-type actions.
@@ -1575,7 +1575,7 @@ def _gen7heur1_extract_features(chunk: List[dict]) -> Dict[str, float]:
 
         for action in actions:
             atype = str(action.get("action_type") or "other")
-            if atype not in _GEN7HEUR1_STANDARD_ACTIONS:
+            if atype not in _GEN10HEUR1_STANDARD_ACTIONS:
                 continue  # skip 'other' and any unknown types
             street = str(action.get("street") or "unknown")
             actor = str(action.get("actor_seat") or "?")
@@ -1648,21 +1648,21 @@ def _sigmoid_g7(x: float) -> float:
     return z / (1.0 + z)
 
 
-def score_chunk_gen7heur1(chunk: List[dict]) -> Tuple[float, str]:
-    """Score a chunk using the gen7heur1 benchmark-derived heuristic profile.
+def score_chunk_gen10heur1(chunk: List[dict]) -> Tuple[float, str]:
+    """Score a chunk using the gen10heur1 benchmark-derived heuristic profile.
 
     Returns (risk_score, route_label) where risk_score is in [0, 1].
     0 = human, 1 = bot.
     """
     if not chunk:
-        return 0.5, "gen7heur1_empty"
+        return 0.5, "gen10heur1_empty"
 
     try:
-        profile = _load_gen7heur1_profile()
+        profile = _load_gen10heur1_profile()
     except Exception:
-        return 0.5, "gen7heur1_profile_load_error"
+        return 0.5, "gen10heur1_profile_load_error"
 
-    features = _gen7heur1_extract_features(chunk)
+    features = _gen10heur1_extract_features(chunk)
     weights = profile["weights"]
     stats = profile["class_stats"]
 
@@ -1692,7 +1692,7 @@ def score_chunk_gen7heur1(chunk: List[dict]) -> Tuple[float, str]:
     confidence = cmin + (cmax - cmin) * alpha
 
     score = 0.5 + (risk - 0.5) * confidence
-    return round(max(0.0, min(1.0, score)), 6), "gen7heur1"
+    return round(max(0.0, min(1.0, score)), 6), "gen10heur1"
 
 
 
@@ -1705,14 +1705,14 @@ def get_chunk_scorer_startup_check(scorer: str) -> Dict[str, object]:
     scorer_norm = (scorer or "").strip().lower()
     info: Dict[str, object] = {
         "scorer": scorer_norm,
-        "active": scorer_norm in {"gen7heur1", "gen8lgbm", "gen9fold15"},
+        "active": scorer_norm in {"gen10heur1", "gen8lgbm", "gen9fold15"},
         "ok": True,
         "error": None,
         "details": {},
     }
 
-    if scorer_norm == "gen7heur1":
-        env_path = os.getenv("POKER44_GEN7HEUR1_PROFILE", "")
+    if scorer_norm == "gen10heur1":
+        env_path = os.getenv("POKER44_GEN10HEUR1_PROFILE", "")
         profile_path = (
             Path(env_path)
             if env_path
@@ -1724,7 +1724,7 @@ def get_chunk_scorer_startup_check(scorer: str) -> Dict[str, object]:
         }
         info["details"] = details
         try:
-            _load_gen7heur1_profile()
+            _load_gen10heur1_profile()
         except Exception as exc:
             info["ok"] = False
             info["error"] = str(exc)
