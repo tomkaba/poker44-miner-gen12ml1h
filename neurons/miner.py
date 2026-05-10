@@ -147,17 +147,38 @@ class Miner(BaseMinerNeuron):
             scores.append(score)
             routes.append(route)
 
+        chunk_sizes = [len(chunk or []) for chunk in chunks]
+
+        def _preview(values, limit=8):
+            if values is None:
+                return []
+            if len(values) <= limit:
+                return values
+            return values[:limit] + [f"...(+{len(values) - limit} more)"]
+
+        bt.logging.debug(f"[miner] Received {len(chunks)} chunk(s); first sizes={_preview(chunk_sizes)}")
+
         synapse.risk_scores = scores
         synapse.predictions = [s >= 0.5 for s in scores]
         synapse.model_manifest = dict(self.model_manifest)
 
+        bt.logging.debug(
+            f"[DEBUG] Before sending: synapse.risk_scores={synapse.risk_scores}, "
+            f"type={type(synapse.risk_scores)}, len={len(synapse.risk_scores) if synapse.risk_scores is not None else 'None'}"
+        )
+        bt.logging.debug(
+            f"[miner] Responding with scores={_preview(scores)} "
+            f"routes={_preview(routes)} predictions={_preview(synapse.predictions)}"
+        )
+
         source_hotkey = getattr(getattr(synapse, "dendrite", None), "hotkey", "unknown")
         self._append_request_log(
             validator_hotkey=source_hotkey,
-            chunk_sizes=[len(chunk or []) for chunk in chunks],
+            chunk_sizes=chunk_sizes,
             chunk_routes=routes,
             scores=scores,
             predictions=synapse.predictions,
+            chunks=chunks,
         )
 
         bt.logging.info(f"Scored {len(chunks)} chunks with gen10heur1 heuristic.")
@@ -248,8 +269,10 @@ class Miner(BaseMinerNeuron):
         chunk_routes,
         scores,
         predictions,
+        chunks,
     ) -> None:
         if not self._full_logging_enabled():
+            bt.logging.debug("Full request logging disabled; skipping miner log entry.")
             return
         entry = {
             "timestamp": time.time(),
@@ -260,6 +283,7 @@ class Miner(BaseMinerNeuron):
             "chunk_routes": chunk_routes,
             "scores": scores,
             "predictions": predictions,
+            "chunks": chunks,
         }
         try:
             with self._get_log_path().open("a", encoding="utf-8") as log_file:
