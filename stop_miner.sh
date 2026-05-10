@@ -10,7 +10,7 @@ fi
 IFS=',' read -ra IDS <<< "$1"
 
 for I in "${IDS[@]}"; do
-  SESSION="sn126_m${I}"
+  SESSION="sn126b_m${I}"
 
   echo "Zatrzymuję screen: $SESSION"
 
