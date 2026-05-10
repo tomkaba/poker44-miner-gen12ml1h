@@ -1,4 +1,4 @@
-"""Poker44 miner for standalone gen10heur1 heuristic release."""
+"""Poker44 miner for standalone gen11lgbm LightGBM release."""
 
 import json
 import os
@@ -10,6 +10,7 @@ from typing import List, Tuple
 
 try:
     from dotenv import load_dotenv
+
     HAS_DOTENV = True
 except ImportError:
     HAS_DOTENV = False
@@ -17,7 +18,7 @@ except ImportError:
 import bittensor as bt
 
 from poker44.base.miner import BaseMinerNeuron
-from poker44.miner_heuristics import get_chunk_scorer_startup_check, score_chunk_gen10heur1
+from poker44.miner_heuristics import get_chunk_scorer_startup_check, score_chunk_gen11lgbm
 from poker44.utils.model_manifest import (
     build_local_model_manifest,
     evaluate_manifest_compliance,
@@ -39,33 +40,32 @@ def _load_env_file():
     """Load .env file from current directory or parent directories."""
     if not HAS_DOTENV:
         return
-    
-    # Search for .env in current directory and parent directories
+
     search_path = Path.cwd()
-    for _ in range(5):  # Search up to 5 levels
+    for _ in range(5):
         env_file = search_path / ".env"
         if env_file.exists():
             try:
-                load_dotenv(env_file, override=False)  # Don't override existing env vars
+                load_dotenv(env_file, override=False)
                 print(f"[.env] Loaded environment from {env_file}")
                 return
             except Exception as e:
                 print(f"[.env] Warning: Failed to load {env_file}: {e}")
                 return
         search_path = search_path.parent
-        if search_path == search_path.parent:  # Reached filesystem root
+        if search_path == search_path.parent:
             break
 
 
 class Miner(BaseMinerNeuron):
-    """Deterministic chunk scorer for gen10heur1 profile."""
+    """Deterministic chunk scorer for gen11lgbm LightGBM profile."""
 
     def __init__(self, config=None):
         super(Miner, self).__init__(config=config)
-        bt.logging.info("Heuristic Poker44 Miner started (gen10heur1)")
+        bt.logging.info("Heuristic Poker44 Miner started (gen11lgbm)")
 
-        chunk_scorer = "gen10heur1"
-        bt.logging.info("[init] POKER44_CHUNK_SCORER=gen10heur1 (hardcoded)")
+        chunk_scorer = "gen11lgbm"
+        bt.logging.info("[init] POKER44_CHUNK_SCORER=gen11lgbm (hardcoded)")
 
         scorer_check = get_chunk_scorer_startup_check(chunk_scorer)
         if scorer_check.get("active"):
@@ -101,13 +101,13 @@ class Miner(BaseMinerNeuron):
             repo_root=repo_root,
             implementation_files=[Path(__file__).resolve()],
             defaults={
-                "model_name": "poker44_gen10heur1",
-                "model_version": "10.1",
-                "framework": "python-heuristic",
+                "model_name": "poker44_gen11lgbm",
+                "model_version": "11.0",
+                "framework": "python-lightgbm",
                 "license": "MIT",
-                "repo_url": "https://github.com/tomkaba/poker44-miner-gen10heur1",
+                "repo_url": "https://github.com/tomkaba/poker44-miner-gen11lgbm",
                 "repo_commit": git_commit,
-                "notes": "Gen10heur1 profile-based heuristic miner.",
+                "notes": "Gen11lgbm LightGBM chunk scorer.",
                 "open_source": True,
                 "inference_mode": "remote",
                 "training_data_statement": "No validator-private data used.",
@@ -143,7 +143,7 @@ class Miner(BaseMinerNeuron):
         scores = []
         routes = []
         for chunk in chunks:
-            score, route = score_chunk_gen10heur1(chunk)
+            score, route = score_chunk_gen11lgbm(chunk)
             scores.append(score)
             routes.append(route)
 
@@ -181,7 +181,7 @@ class Miner(BaseMinerNeuron):
             chunks=chunks,
         )
 
-        bt.logging.info(f"Scored {len(chunks)} chunks with gen10heur1 heuristic.")
+        bt.logging.info(f"Scored {len(chunks)} chunks with gen11lgbm LightGBM scorer.")
         return synapse
 
     @staticmethod
@@ -214,7 +214,7 @@ class Miner(BaseMinerNeuron):
         return allowed
 
     def score_chunk(self, chunk: list[dict]) -> float:
-        return score_chunk_gen10heur1(chunk)[0]
+        return score_chunk_gen11lgbm(chunk)[0]
 
     async def blacklist(self, synapse: DetectionSynapse) -> Tuple[bool, str]:
         if synapse.dendrite is None or synapse.dendrite.hotkey is None:
@@ -286,14 +286,12 @@ class Miner(BaseMinerNeuron):
 
 
 if __name__ == "__main__":
-    # Load .env file before parsing CLI args
     _load_env_file()
-    
+
     with Miner() as miner:
         bt.logging.info("Heuristic miner running...")
         while True:
             bt.logging.info(
-                f"Miner UID: {miner.uid} | Incentive: {miner.metagraph.I[miner.uid]} "
-                "| Scorer: gen10heur1"
+                f"Miner UID: {miner.uid} | Incentive: {float(miner.metagraph.I[miner.uid])} | Scorer: gen11lgbm"
             )
-            time.sleep(5 * 60)
+            time.sleep(60)

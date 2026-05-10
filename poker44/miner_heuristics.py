@@ -1,38 +1,22 @@
-"""Heuristic scoring for Poker44 gen10heur1 release."""
+"""LightGBM scoring for Poker44 gen11lgbm release."""
 
 from __future__ import annotations
 
-import math
 import os
+import math
 from collections import Counter
 from pathlib import Path
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Dict, List, Optional, Tuple
 
 
-_GEN10HEUR1_PROFILE: Optional[dict] = None
-_GEN10HEUR1_STANDARD_ACTIONS: Set[str] = {"bet", "call", "check", "fold", "raise"}
-_EPS_G10 = 1e-9
+_GEN11LGBM_MODEL = None
+_GEN11LGBM_PROFILE = None
+_GEN11LGBM_KEEP_MASK = None
+_GEN11LGBM_LOAD_ERROR: Optional[str] = None
 
 
-def _load_gen10heur1_profile() -> dict:
-    global _GEN10HEUR1_PROFILE
-    if _GEN10HEUR1_PROFILE is not None:
-        return _GEN10HEUR1_PROFILE
-
-    env_path = os.getenv("POKER44_GEN10HEUR1_PROFILE", "")
-    if env_path:
-        profile_path = Path(env_path)
-    else:
-        profile_path = Path(__file__).resolve().parents[1] / "models" / "benchmark_heuristic_profile.json"
-
-    import json as _json
-
-    with open(profile_path, "r", encoding="utf-8") as f:
-        _GEN10HEUR1_PROFILE = _json.load(f)
-    return _GEN10HEUR1_PROFILE
-
-
-def _gen10heur1_extract_features(chunk: List[dict]) -> Dict[str, float]:
+def _gen11lgbm_extract_features(chunk: List[dict]) -> Dict[str, float]:
+    standard_actions = {"bet", "call", "check", "fold", "raise"}
     action_counter: Counter = Counter()
     street_counter: Counter = Counter()
     actor_counter: Counter = Counter()
@@ -62,7 +46,7 @@ def _gen10heur1_extract_features(chunk: List[dict]) -> Dict[str, float]:
 
         for action in actions:
             atype = str(action.get("action_type") or "other")
-            if atype not in _GEN10HEUR1_STANDARD_ACTIONS:
+            if atype not in standard_actions:
                 continue
 
             street = str(action.get("street") or "unknown")
@@ -81,6 +65,7 @@ def _gen10heur1_extract_features(chunk: List[dict]) -> Dict[str, float]:
     hand_count = len(chunk)
     total_actions = sum(action_counter.values())
     denom = max(1, total_actions)
+    eps = 1e-9
 
     def _smean(vals: List[float]) -> float:
         return float(sum(vals) / len(vals)) if vals else 0.0
@@ -95,7 +80,7 @@ def _gen10heur1_extract_features(chunk: List[dict]) -> Dict[str, float]:
         t = sum(counter.values())
         if t <= 0:
             return 0.0
-        return float(-sum((c / t) * math.log(c / t + _EPS_G10) for c in counter.values()))
+        return float(-sum((c / t) * math.log(c / t + eps) for c in counter.values()))
 
     return {
         "action_entropy": _entropy(action_counter),
@@ -128,57 +113,70 @@ def _gen10heur1_extract_features(chunk: List[dict]) -> Dict[str, float]:
     }
 
 
-def _sigmoid_g10(x: float) -> float:
-    if x >= 0:
-        z = math.exp(-x)
-        return 1.0 / (1.0 + z)
-    z = math.exp(x)
-    return z / (1.0 + z)
+def _load_gen11lgbm() -> bool:
+    """Lazy-load LightGBM model and profile. Returns True on success."""
+    global _GEN11LGBM_MODEL, _GEN11LGBM_PROFILE, _GEN11LGBM_KEEP_MASK, _GEN11LGBM_LOAD_ERROR
+    if _GEN11LGBM_MODEL is not None:
+        return True
+    if _GEN11LGBM_LOAD_ERROR is not None:
+        return False
 
+    import json as _json
+    import pickle
 
-def score_chunk_gen10heur1(chunk: List[dict]) -> Tuple[float, str]:
-    if not chunk:
-        return 0.5, "gen10heur1_empty"
+    import numpy as np
+
+    base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    profile_path = os.environ.get(
+        "POKER44_GEN11LGBM_PROFILE",
+        os.path.join(base, "models", "benchmark_lgbm_profile.json"),
+    )
+    model_path = os.environ.get(
+        "POKER44_GEN11LGBM_MODEL",
+        os.path.join(base, "models", "benchmark_lgbm_model.pkl"),
+    )
 
     try:
-        profile = _load_gen10heur1_profile()
+        with open(profile_path, "r", encoding="utf-8") as f:
+            profile = _json.load(f)
+        with open(model_path, "rb") as f:
+            model = pickle.load(f)
+        _GEN11LGBM_PROFILE = profile
+        _GEN11LGBM_MODEL = model
+        _GEN11LGBM_KEEP_MASK = np.array(profile["keep_mask"], dtype=bool)
+        return True
+    except Exception as exc:
+        _GEN11LGBM_LOAD_ERROR = str(exc)
+        return False
+
+
+def score_chunk_gen11lgbm(chunk: List[dict]) -> Tuple[float, str]:
+    """Score a chunk using the gen11 LightGBM model."""
+    import numpy as np
+    import pandas as pd
+
+    if not _load_gen11lgbm():
+        return 0.5, "gen11lgbm_load_error"
+
+    features = _gen11lgbm_extract_features(chunk)
+    all_feature_names = _GEN11LGBM_PROFILE["all_feature_names"]
+    all_vals = [features[k] for k in all_feature_names]
+    row = np.array([all_vals], dtype=np.float32)[:, _GEN11LGBM_KEEP_MASK]
+    selected_feature_names = [
+        name for name, keep in zip(all_feature_names, _GEN11LGBM_KEEP_MASK) if keep
+    ]
+    row_df = pd.DataFrame(row, columns=selected_feature_names)
+
+    try:
+        score = float(_GEN11LGBM_MODEL.predict_proba(row_df)[0, 1])
     except Exception:
-        return 0.5, "gen10heur1_profile_load_error"
+        return 0.5, "gen11lgbm_predict_error"
 
-    features = _gen10heur1_extract_features(chunk)
-    weights = profile["weights"]
-    stats = profile["class_stats"]
-
-    raw = 0.0
-    for feat in profile["feature_names"]:
-        w = float(weights.get(feat, 0.0))
-        if w == 0.0:
-            continue
-        mu_h = float(stats["human"][feat]["mean"])
-        mu_b = float(stats["bot"][feat]["mean"])
-        sd_h = float(stats["human"][feat]["std"])
-        sd_b = float(stats["bot"][feat]["std"])
-        midpoint = 0.5 * (mu_h + mu_b)
-        pooled = math.sqrt((sd_h * sd_h + sd_b * sd_b) / 2.0) + _EPS_G10
-        z = (float(features.get(feat, midpoint)) - midpoint) / pooled
-        raw += w * z
-
-    risk = _sigmoid_g10(raw)
-
-    smin = float(profile["score_logic"].get("chunk_size_min", 40))
-    smax = float(profile["score_logic"].get("chunk_size_max", 80))
-    cmin = float(profile["score_logic"].get("chunk_confidence_min", 0.65))
-    cmax = float(profile["score_logic"].get("chunk_confidence_max", 1.0))
-    size = float(features.get("chunk_size", smin))
-    alpha = max(0.0, min(1.0, (size - smin) / max(_EPS_G10, smax - smin)))
-    confidence = cmin + (cmax - cmin) * alpha
-
-    score = 0.5 + (risk - 0.5) * confidence
-    return round(max(0.0, min(1.0, score)), 6), "gen10heur1"
+    return round(max(0.0, min(1.0, score)), 6), "gen11lgbm"
 
 
 def score_chunk(chunk: List[dict]) -> float:
-    score, _route = score_chunk_gen10heur1(chunk)
+    score, _route = score_chunk_gen11lgbm(chunk)
     return score
 
 
@@ -186,26 +184,38 @@ def get_chunk_scorer_startup_check(scorer: str) -> Dict[str, object]:
     scorer_norm = (scorer or "").strip().lower()
     info: Dict[str, object] = {
         "scorer": scorer_norm,
-        "active": scorer_norm == "gen10heur1",
+        "active": scorer_norm == "gen11lgbm",
         "ok": True,
         "error": None,
         "details": {},
     }
 
-    if scorer_norm != "gen10heur1":
+    if scorer_norm != "gen11lgbm":
         return info
 
-    env_path = os.getenv("POKER44_GEN10HEUR1_PROFILE", "")
-    profile_path = Path(env_path) if env_path else Path(__file__).resolve().parents[1] / "models" / "benchmark_heuristic_profile.json"
+    base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    profile_path = Path(
+        os.environ.get(
+            "POKER44_GEN11LGBM_PROFILE",
+            os.path.join(base, "models", "benchmark_lgbm_profile.json"),
+        )
+    )
+    model_path = Path(
+        os.environ.get(
+            "POKER44_GEN11LGBM_MODEL",
+            os.path.join(base, "models", "benchmark_lgbm_model.pkl"),
+        )
+    )
     info["details"] = {
         "profile_path": str(profile_path),
         "profile_exists": profile_path.exists(),
+        "model_path": str(model_path),
+        "model_exists": model_path.exists(),
     }
 
-    try:
-        _load_gen10heur1_profile()
-    except Exception as exc:
-        info["ok"] = False
-        info["error"] = str(exc)
+    ok = _load_gen11lgbm()
+    info["ok"] = ok
+    if not ok:
+        info["error"] = _GEN11LGBM_LOAD_ERROR
 
     return info

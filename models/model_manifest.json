@@ -1,18 +1,19 @@
 {
   "schema_version": "1",
   "open_source": true,
-  "model_name": "poker44_gen10heur1",
-  "model_version": "10.1",
-  "framework": "python-heuristic",
+  "model_name": "poker44_gen11lgbm",
+  "model_version": "11.0",
+  "framework": "python-lightgbm",
   "license": "MIT",
-  "repo_url": "https://github.com/tomkaba/poker44-miner-gen10heur1",
-  "repo_commit": "206ac6daee9d066ad8233866401bacb957ab8c4e",
+  "repo_url": "https://github.com/tomkaba/poker44-miner-gen11lgbm",
+  "repo_commit": "110e2454e013e8cf9565e5bcf3e9163e2d3d2b4b",
   "inference_mode": "remote",
   "training_data_statement": "No validator-private data used.",
   "data_attestation": "This miner does not train on validator-private human data.",
   "private_data_attestation": "This miner does not train on validator-private human data.",
   "implementation_files": [
-    "models/benchmark_heuristic_profile.json",
+    "models/benchmark_lgbm_model.pkl",
+    "models/benchmark_lgbm_profile.json",
     "neurons/miner.py",
     "poker44/base/miner.py",
     "poker44/base/neuron.py",
@@ -22,6 +23,6 @@
     "poker44/utils/model_manifest.py",
     "poker44/validator/synapse.py"
   ],
-  "implementation_sha256": "55493f042100e559bcf115f03768fe1fd0f1ac675ba26ae00309c320d705deb3",
-  "notes": "Gen10heur1 profile-based heuristic miner."
+  "implementation_sha256": "cf54ca98a7a3af8f9e92e5e80462b26510dd0465a724e3d1c8cffbf1e29b9c85",
+  "notes": "Gen11lgbm LightGBM chunk scorer."
 }
