@@ -12,10 +12,16 @@
   "data_attestation": "This miner does not train on validator-private human data.",
   "private_data_attestation": "This miner does not train on validator-private human data.",
   "implementation_files": [
+    "models/benchmark_heuristic_profile.json",
     "neurons/miner.py",
+    "poker44/base/miner.py",
+    "poker44/base/neuron.py",
     "poker44/miner_heuristics.py",
-    "models/benchmark_heuristic_profile.json"
+    "poker44/utils/config.py",
+    "poker44/utils/misc.py",
+    "poker44/utils/model_manifest.py",
+    "poker44/validator/synapse.py"
   ],
-  "implementation_sha256": "68ccae9726b9c4bfc9b439fb68af82b8755d95a633b2ccb94ffd7e2cccda790b",
+  "implementation_sha256": "08359353e81890bcc2758ff9e08a8fdc19fd6becb169f8612834791a477c490b",
   "notes": "Gen10heur1 profile-based heuristic miner."
 }
