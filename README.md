@@ -7,8 +7,8 @@ Minimal release repository for model gen10heur1 — pure heuristic scorer.
 ```bash
 git clone https://github.com/tomkaba/poker44-miner-gen10heur1.git
 cd poker44-miner-gen10heur1
-python3 -m venv .venv-1
-source .venv-1/bin/activate
+python3 -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
 pip install -e .
 ```
