@@ -62,7 +62,7 @@ class Miner(BaseMinerNeuron):
 
     def __init__(self, config=None):
         super(Miner, self).__init__(config=config)
-        bt.logging.info("Heuristic Poker44 Miner started (gen11lgbm)")
+        bt.logging.info("LGBM Poker44 Miner started (gen11lgbm)")
 
         chunk_scorer = "gen11lgbm"
         bt.logging.info("[init] POKER44_CHUNK_SCORER=gen11lgbm (hardcoded)")
@@ -289,7 +289,7 @@ if __name__ == "__main__":
     _load_env_file()
 
     with Miner() as miner:
-        bt.logging.info("Heuristic miner running...")
+        bt.logging.info("LGBM miner running...")
         while True:
             bt.logging.info(
                 f"Miner UID: {miner.uid} | Incentive: {float(miner.metagraph.I[miner.uid])} | Scorer: gen11lgbm"
