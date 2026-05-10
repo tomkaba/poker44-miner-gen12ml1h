@@ -63,7 +63,6 @@ Copy `.env.example` to `.env` and fill in your values. The miner searches for `.
 
 ### Optional Features
 
-- `POKER44_DISABLE_FULL_LOGS` — Set to `true` to disable full request logging (default: false)
 
 ## Implementation
 

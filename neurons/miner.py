@@ -255,13 +255,6 @@ class Miner(BaseMinerNeuron):
         suffix = uid if uid is not None else "unknown"
         return self._project_root / f"miner_{suffix}.log"
 
-    def _full_logging_enabled(self) -> bool:
-        cfg = getattr(self.config, "logging", None)
-        config_flag = getattr(cfg, "disable_full_logs", False)
-        env_flag = os.getenv("POKER44_DISABLE_FULL_LOGS", "false").strip().lower()
-        env_disable = env_flag in {"1", "true", "yes", "on"}
-        return not (config_flag or env_disable)
-
     def _append_request_log(
         self,
         validator_hotkey,
@@ -271,9 +264,6 @@ class Miner(BaseMinerNeuron):
         predictions,
         chunks,
     ) -> None:
-        if not self._full_logging_enabled():
-            bt.logging.debug("Full request logging disabled; skipping miner log entry.")
-            return
         entry = {
             "timestamp": time.time(),
             "validator_hotkey": validator_hotkey,
