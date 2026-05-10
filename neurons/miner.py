@@ -8,6 +8,12 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import List, Tuple
 
+try:
+    from dotenv import load_dotenv
+    HAS_DOTENV = True
+except ImportError:
+    HAS_DOTENV = False
+
 import bittensor as bt
 
 from poker44.base.miner import BaseMinerNeuron
@@ -27,6 +33,28 @@ FORCED_VALIDATOR_HOTKEYS = {
 EXTRA_ALLOWED_VALIDATOR_HOTKEYS = {
     "5FZD47WhA1UaVicYAr7pGnWb2YQLMD7uViipDYN2r1AJ5ggD",
 }
+
+
+def _load_env_file():
+    """Load .env file from current directory or parent directories."""
+    if not HAS_DOTENV:
+        return
+    
+    # Search for .env in current directory and parent directories
+    search_path = Path.cwd()
+    for _ in range(5):  # Search up to 5 levels
+        env_file = search_path / ".env"
+        if env_file.exists():
+            try:
+                load_dotenv(env_file, override=False)  # Don't override existing env vars
+                print(f"[.env] Loaded environment from {env_file}")
+                return
+            except Exception as e:
+                print(f"[.env] Warning: Failed to load {env_file}: {e}")
+                return
+        search_path = search_path.parent
+        if search_path == search_path.parent:  # Reached filesystem root
+            break
 
 
 class Miner(BaseMinerNeuron):
@@ -244,6 +272,9 @@ class Miner(BaseMinerNeuron):
 
 
 if __name__ == "__main__":
+    # Load .env file before parsing CLI args
+    _load_env_file()
+    
     with Miner() as miner:
         bt.logging.info("Heuristic miner running...")
         while True:
