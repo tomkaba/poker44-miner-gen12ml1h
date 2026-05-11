@@ -38,18 +38,13 @@ if [[ ! -x "$VENV_BIN/python" ]]; then
   exit 1
 fi
 
-MANIFEST_IMPL_SHA256="$($VENV_BIN/python - <<'PY' "$REPO"
+MANIFEST_IMPL_SHA256="$($VENV_BIN/python - <<'PY' "$REPO" "$MANIFEST_IMPL_FILES"
 from pathlib import Path
 import hashlib
 import sys
 
 repo_root = Path(sys.argv[1]).resolve()
-files = [
-    'neurons/miner.py',
-    'poker44/miner_heuristics.py',
-  'models/benchmark_lgbm_profile.json',
-  'models/benchmark_lgbm_model.pkl',
-]
+files = [f.strip() for f in sys.argv[2].split(',') if f.strip()]
 digest = hashlib.sha256()
 for rel in sorted(files):
     p = repo_root / rel
