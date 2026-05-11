@@ -67,6 +67,7 @@ fi
 MANIFEST_IMPL_SHA256="$($VENV_BIN/python - <<'PY' "$REPO" "$MANIFEST_IMPL_FILES"
 from pathlib import Path
 import hashlib
+import subprocess
 import sys
 
 repo_root = Path(sys.argv[1]).resolve()
@@ -81,13 +82,28 @@ for rel in sorted(files):
     p = repo_root / rel
     if not p.exists():
         raise SystemExit(f"MISSING: {rel}")
+
+  # Use Git-tracked blob bytes when available so implementation SHA is
+  # identical across plain git clones, including LFS-pointer files.
+  file_bytes = None
+  try:
+    file_bytes = subprocess.check_output(
+      ["git", "-C", str(repo_root), "show", f"HEAD:{rel}"],
+      stderr=subprocess.DEVNULL,
+    )
+  except Exception:
+    file_bytes = None
+
     digest.update(rel.encode('utf-8'))
+  if file_bytes is not None:
+    digest.update(file_bytes)
+  else:
     with p.open('rb') as f:
-        while True:
-            chunk = f.read(1024 * 1024)
-            if not chunk:
-                break
-            digest.update(chunk)
+      while True:
+        chunk = f.read(1024 * 1024)
+        if not chunk:
+          break
+        digest.update(chunk)
 print(digest.hexdigest())
 PY
 )"
