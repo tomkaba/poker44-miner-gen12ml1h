@@ -19,6 +19,8 @@ pip install -e .
 Model artifact is tracked with Git LFS. On a fresh host run:
 
 ```bash
+# git-lfs is a system binary (not a Python package), so pip will not install it.
+sudo apt-get update && sudo apt-get install -y git-lfs
 git lfs install
 git lfs pull --include weights/ml_gen5_s123467_model.pkl
 ```
