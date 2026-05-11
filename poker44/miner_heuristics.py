@@ -1,182 +1,196 @@
-"""LightGBM scoring for Poker44 gen11lgbm release."""
+"""ML1H-only scoring for Poker44 gen12 release (fixed Gen5 artifact)."""
 
 from __future__ import annotations
 
 import os
-import math
-from collections import Counter
+import pickle
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
+import numpy as np
 
-_GEN11LGBM_MODEL = None
-_GEN11LGBM_PROFILE = None
-_GEN11LGBM_KEEP_MASK = None
-_GEN11LGBM_LOAD_ERROR: Optional[str] = None
+REPO_ROOT = Path(__file__).resolve().parent.parent
+ML1H_MODEL_PATH = REPO_ROOT / "weights" / "ml_gen5_s123467_model.pkl"
+ML1H_SCALER_PATH = REPO_ROOT / "weights" / "ml_gen5_s123467_scaler.pkl"
+ML1H_THRESHOLD = 0.3
 
-
-def _gen11lgbm_extract_features(chunk: List[dict]) -> Dict[str, float]:
-    standard_actions = {"bet", "call", "check", "fold", "raise"}
-    action_counter: Counter = Counter()
-    street_counter: Counter = Counter()
-    actor_counter: Counter = Counter()
-
-    actions_per_hand: List[float] = []
-    raise_bb_values: List[float] = []
-    bet_bb_values: List[float] = []
-    pot_values: List[float] = []
-    player_counts: List[float] = []
-    street_depths: List[float] = []
-
-    showdown_count = 0
-
-    for hand in chunk:
-        actions = hand.get("actions") or []
-        outcome = hand.get("outcome") or {}
-        players = hand.get("players") or []
-        streets = hand.get("streets") or []
-
-        actions_per_hand.append(float(len(actions)))
-        player_counts.append(float(len(players)))
-        street_depths.append(float(len(streets)))
-        pot_values.append(float(outcome.get("total_pot") or 0.0))
-
-        if bool(outcome.get("showdown")):
-            showdown_count += 1
-
-        for action in actions:
-            atype = str(action.get("action_type") or "other")
-            if atype not in standard_actions:
-                continue
-
-            street = str(action.get("street") or "unknown")
-            actor = str(action.get("actor_seat") or "?")
-
-            action_counter[atype] += 1
-            street_counter[street] += 1
-            actor_counter[actor] += 1
-
-            bb_size = float(action.get("normalized_amount_bb") or 0.0)
-            if atype == "raise":
-                raise_bb_values.append(bb_size)
-            elif atype == "bet":
-                bet_bb_values.append(bb_size)
-
-    hand_count = len(chunk)
-    total_actions = sum(action_counter.values())
-    denom = max(1, total_actions)
-    eps = 1e-9
-
-    def _smean(vals: List[float]) -> float:
-        return float(sum(vals) / len(vals)) if vals else 0.0
-
-    def _sstd(vals: List[float]) -> float:
-        if len(vals) < 2:
-            return 0.0
-        m = sum(vals) / len(vals)
-        return float(math.sqrt(sum((v - m) ** 2 for v in vals) / len(vals)))
-
-    def _entropy(counter: Counter) -> float:
-        t = sum(counter.values())
-        if t <= 0:
-            return 0.0
-        return float(-sum((c / t) * math.log(c / t + eps) for c in counter.values()))
-
-    return {
-        "action_entropy": _entropy(action_counter),
-        "actions_per_hand_mean": _smean(actions_per_hand),
-        "actions_per_hand_std": _sstd(actions_per_hand),
-        "actions_total": float(total_actions),
-        "actor_entropy": _entropy(actor_counter),
-        "aggression_ratio": (
-            (action_counter.get("raise", 0) + action_counter.get("bet", 0))
-            / max(1, action_counter.get("call", 0) + action_counter.get("check", 0))
-        ),
-        "bet_bb_mean": _smean(bet_bb_values),
-        "bet_bb_std": _sstd(bet_bb_values),
-        "bet_ratio": action_counter.get("bet", 0) / denom,
-        "call_ratio": action_counter.get("call", 0) / denom,
-        "check_ratio": action_counter.get("check", 0) / denom,
-        "chunk_size": float(hand_count),
-        "fold_ratio": action_counter.get("fold", 0) / denom,
-        "players_mean": _smean(player_counts),
-        "players_std": _sstd(player_counts),
-        "pot_mean": _smean(pot_values),
-        "pot_std": _sstd(pot_values),
-        "raise_bb_mean": _smean(raise_bb_values),
-        "raise_bb_std": _sstd(raise_bb_values),
-        "raise_ratio": action_counter.get("raise", 0) / denom,
-        "showdown_rate": showdown_count / max(1, hand_count),
-        "street_depth_mean": _smean(street_depths),
-        "street_depth_std": _sstd(street_depths),
-        "street_entropy": _entropy(street_counter),
-    }
+_ML1H_MODEL = None
+_ML1H_SCALER = None
+_ML1H_AVAILABLE = False
+_ML1H_LOAD_ERROR: Optional[str] = None
 
 
-def _load_gen11lgbm() -> bool:
-    """Lazy-load LightGBM model and profile. Returns True on success."""
-    global _GEN11LGBM_MODEL, _GEN11LGBM_PROFILE, _GEN11LGBM_KEEP_MASK, _GEN11LGBM_LOAD_ERROR
-    if _GEN11LGBM_MODEL is not None:
+def _clamp01(value: float) -> float:
+    return max(0.0, min(1.0, value))
+
+
+def _safe_float(value: object) -> float:
+    try:
+        return float(value)
+    except Exception:
+        return 0.0
+
+
+def _extract_ml_features_gen4(chunk: List[dict]) -> Optional[np.ndarray]:
+    """Extract 16-dimensional feature vector used by Gen5 single-hand model."""
+    if not chunk:
+        return None
+
+    hand = chunk[0]
+    players = hand.get("players") or []
+    actions = hand.get("actions") or []
+    outcome = hand.get("outcome") or {}
+    streets = hand.get("streets") or []
+    metadata = hand.get("metadata") or {}
+
+    hand_bb_val = _safe_float(metadata.get("bb") or 0.01) or 0.01
+    max_seats = max(int(metadata.get("max_seats") or 6), 1)
+
+    num_players = float(len(players))
+    filled_ratio = num_players / float(max_seats)
+
+    starting_stacks = [_safe_float(p.get("starting_stack")) for p in players]
+    # Keep the same stack scaling as the source ml1h implementation.
+    stack_factor = 15.0
+    starting_stacks_scaled = [s * stack_factor for s in starting_stacks]
+    stack_mean = float(np.mean(starting_stacks_scaled)) if starting_stacks_scaled else 0.0
+    stack_std = float(np.std(starting_stacks_scaled)) if starting_stacks_scaled else 0.0
+    stack_cv = stack_std / (stack_mean + 1e-9)
+
+    action_types = [str(a.get("action_type") or "").lower() for a in actions]
+    total_actions = float(len(action_types))
+
+    def _cnt(name: str) -> float:
+        return float(sum(1 for t in action_types if t == name))
+
+    call_c = _cnt("call")
+    check_c = _cnt("check")
+    fold_c = _cnt("fold")
+    raise_c = _cnt("raise")
+    bet_c = _cnt("bet")
+
+    meaningful = call_c + check_c + fold_c + raise_c + bet_c
+    if meaningful > 0:
+        call_r = call_c / meaningful
+        check_r = check_c / meaningful
+        fold_r = fold_c / meaningful
+        raise_r = raise_c / meaningful
+    else:
+        call_r = check_r = fold_r = raise_r = 0.0
+
+    agg_ratio = (raise_c + bet_c) / (call_c + check_c + 1.0)
+
+    amounts = [_safe_float(a.get("amount")) for a in actions]
+    amounts_pos = [a for a in amounts if a > 0]
+    amount_mean_bb = (float(np.mean(amounts_pos)) / hand_bb_val) if amounts_pos else 0.0
+    amount_max_bb = (float(np.max(amounts_pos)) / hand_bb_val) if amounts_pos else 0.0
+
+    total_pot = _safe_float(outcome.get("total_pot"))
+    total_pot_bb = total_pot / hand_bb_val
+    showdown = 1.0 if bool(outcome.get("showdown")) else 0.0
+
+    flop_seen = 1.0 if any(s.get("street") == "FLOP" for s in streets) else 0.0
+    turn_seen = 1.0 if any(s.get("street") == "TURN" for s in streets) else 0.0
+    river_seen = 1.0 if any(s.get("street") == "RIVER" for s in streets) else 0.0
+    street_depth = flop_seen + turn_seen + river_seen
+
+    return np.array(
+        [
+            num_players,
+            filled_ratio,
+            stack_mean,
+            stack_std,
+            stack_cv,
+            total_actions,
+            call_r,
+            check_r,
+            fold_r,
+            raise_r,
+            agg_ratio,
+            amount_mean_bb,
+            amount_max_bb,
+            total_pot_bb,
+            showdown,
+            street_depth,
+        ],
+        dtype=np.float32,
+    )
+
+
+def _load_ml1h_model() -> bool:
+    """Load fixed Gen5 single-hand model and scaler."""
+    global _ML1H_MODEL, _ML1H_SCALER, _ML1H_AVAILABLE, _ML1H_LOAD_ERROR
+
+    if _ML1H_AVAILABLE and _ML1H_MODEL is not None and _ML1H_SCALER is not None:
         return True
-    if _GEN11LGBM_LOAD_ERROR is not None:
+    if _ML1H_LOAD_ERROR is not None:
         return False
 
-    import json as _json
-    import pickle
-
-    import numpy as np
-
-    base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    profile_path = os.environ.get(
-        "POKER44_GEN11LGBM_PROFILE",
-        os.path.join(base, "models", "benchmark_lgbm_profile.json"),
-    )
-    model_path = os.environ.get(
-        "POKER44_GEN11LGBM_MODEL",
-        os.path.join(base, "models", "benchmark_lgbm_model.pkl"),
-    )
-
     try:
-        with open(profile_path, "r", encoding="utf-8") as f:
-            profile = _json.load(f)
-        with open(model_path, "rb") as f:
-            model = pickle.load(f)
-        _GEN11LGBM_PROFILE = profile
-        _GEN11LGBM_MODEL = model
-        _GEN11LGBM_KEEP_MASK = np.array(profile["keep_mask"], dtype=bool)
+        with open(ML1H_MODEL_PATH, "rb") as f:
+            _ML1H_MODEL = pickle.load(f)
+        with open(ML1H_SCALER_PATH, "rb") as f:
+            _ML1H_SCALER = pickle.load(f)
+        _ML1H_AVAILABLE = True
+        _ML1H_LOAD_ERROR = None
         return True
     except Exception as exc:
-        _GEN11LGBM_LOAD_ERROR = str(exc)
+        _ML1H_MODEL = None
+        _ML1H_SCALER = None
+        _ML1H_AVAILABLE = False
+        _ML1H_LOAD_ERROR = str(exc)
         return False
 
 
-def score_chunk_gen11lgbm(chunk: List[dict]) -> Tuple[float, str]:
-    """Score a chunk using the gen11 LightGBM model."""
-    import numpy as np
-    import pandas as pd
+def _predict_single_hand_probability(hand: dict) -> Optional[float]:
+    if not _load_ml1h_model():
+        return None
 
-    if not _load_gen11lgbm():
-        return 0.5, "gen11lgbm_load_error"
-
-    features = _gen11lgbm_extract_features(chunk)
-    all_feature_names = _GEN11LGBM_PROFILE["all_feature_names"]
-    all_vals = [features[k] for k in all_feature_names]
-    row = np.array([all_vals], dtype=np.float32)[:, _GEN11LGBM_KEEP_MASK]
-    selected_feature_names = [
-        name for name, keep in zip(all_feature_names, _GEN11LGBM_KEEP_MASK) if keep
-    ]
-    row_df = pd.DataFrame(row, columns=selected_feature_names)
+    features = _extract_ml_features_gen4([hand])
+    if features is None:
+        return None
 
     try:
-        score = float(_GEN11LGBM_MODEL.predict_proba(row_df)[0, 1])
+        batch = features.reshape(1, -1)
+        batch = _ML1H_SCALER.transform(batch)
+        prob = float(_ML1H_MODEL.predict_proba(batch)[0, 1])
+        return _clamp01(prob)
     except Exception:
-        return 0.5, "gen11lgbm_predict_error"
+        return None
 
-    return round(max(0.0, min(1.0, score)), 6), "gen11lgbm"
+
+def score_chunk_ml1h_with_route(chunk: List[dict]) -> Tuple[float, str]:
+    """Score every request via ml1h model only, with no fallback scorers."""
+    if not chunk:
+        return 0.5, "empty_chunk"
+
+    if not _load_ml1h_model():
+        return 0.5, "ml1h_model_unavailable"
+
+    if len(chunk) == 1:
+        raw = _predict_single_hand_probability(chunk[0])
+        if raw is None:
+            return 0.5, "ml1h_single_error"
+        calibrated = _clamp01(raw - ML1H_THRESHOLD + 0.5)
+        return round(calibrated, 6), "ml1h_single"
+
+    probs: List[float] = []
+    for hand in chunk:
+        raw = _predict_single_hand_probability(hand)
+        if raw is not None:
+            probs.append(raw)
+
+    if not probs:
+        return 0.5, "ml1h_vote_error"
+
+    calibrated = np.clip(np.asarray(probs, dtype=np.float32) - ML1H_THRESHOLD + 0.5, 0.0, 1.0)
+    bot_flags = calibrated >= 0.5
+    score = float(np.mean(bot_flags.astype(np.float32)))
+    return round(_clamp01(score), 6), "ml1h_vote"
 
 
 def score_chunk(chunk: List[dict]) -> float:
-    score, _route = score_chunk_gen11lgbm(chunk)
+    score, _route = score_chunk_ml1h_with_route(chunk)
     return score
 
 
@@ -184,38 +198,26 @@ def get_chunk_scorer_startup_check(scorer: str) -> Dict[str, object]:
     scorer_norm = (scorer or "").strip().lower()
     info: Dict[str, object] = {
         "scorer": scorer_norm,
-        "active": scorer_norm == "gen11lgbm",
+        "active": scorer_norm == "ml1h",
         "ok": True,
         "error": None,
         "details": {},
     }
 
-    if scorer_norm != "gen11lgbm":
+    if scorer_norm != "ml1h":
         return info
 
-    base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    profile_path = Path(
-        os.environ.get(
-            "POKER44_GEN11LGBM_PROFILE",
-            os.path.join(base, "models", "benchmark_lgbm_profile.json"),
-        )
-    )
-    model_path = Path(
-        os.environ.get(
-            "POKER44_GEN11LGBM_MODEL",
-            os.path.join(base, "models", "benchmark_lgbm_model.pkl"),
-        )
-    )
     info["details"] = {
-        "profile_path": str(profile_path),
-        "profile_exists": profile_path.exists(),
-        "model_path": str(model_path),
-        "model_exists": model_path.exists(),
+        "model_path": str(ML1H_MODEL_PATH),
+        "model_exists": ML1H_MODEL_PATH.exists(),
+        "scaler_path": str(ML1H_SCALER_PATH),
+        "scaler_exists": ML1H_SCALER_PATH.exists(),
+        "threshold": ML1H_THRESHOLD,
     }
 
-    ok = _load_gen11lgbm()
+    ok = _load_ml1h_model()
     info["ok"] = ok
     if not ok:
-        info["error"] = _GEN11LGBM_LOAD_ERROR
+        info["error"] = _ML1H_LOAD_ERROR
 
     return info

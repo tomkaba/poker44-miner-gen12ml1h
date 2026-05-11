@@ -1,4 +1,4 @@
-"""Poker44 miner for standalone gen11lgbm LightGBM release."""
+"""Poker44 miner for standalone gen12 ml1h release."""
 
 import json
 import os
@@ -18,7 +18,7 @@ except ImportError:
 import bittensor as bt
 
 from poker44.base.miner import BaseMinerNeuron
-from poker44.miner_heuristics import get_chunk_scorer_startup_check, score_chunk_gen11lgbm
+from poker44.miner_heuristics import get_chunk_scorer_startup_check, score_chunk_ml1h_with_route
 from poker44.utils.model_manifest import (
     build_local_model_manifest,
     evaluate_manifest_compliance,
@@ -58,14 +58,14 @@ def _load_env_file():
 
 
 class Miner(BaseMinerNeuron):
-    """Deterministic chunk scorer for gen11lgbm LightGBM profile."""
+    """Deterministic ml1h-only chunk scorer for gen12 release."""
 
     def __init__(self, config=None):
         super(Miner, self).__init__(config=config)
-        bt.logging.info("LGBM Poker44 Miner started (gen11lgbm)")
+        bt.logging.info("ML1H Poker44 Miner started (gen12ml1h)")
 
-        chunk_scorer = "gen11lgbm"
-        bt.logging.info("[init] POKER44_CHUNK_SCORER=gen11lgbm (hardcoded)")
+        chunk_scorer = "ml1h"
+        bt.logging.info("[init] POKER44_CHUNK_SCORER=ml1h (hardcoded)")
 
         scorer_check = get_chunk_scorer_startup_check(chunk_scorer)
         if scorer_check.get("active"):
@@ -90,7 +90,7 @@ class Miner(BaseMinerNeuron):
 
         try:
             git_commit = subprocess.check_output(
-                ["git", "-C", str(repo_root), "rev-parse", "HEAD"],
+                ["git", "-C", str(repo_root), "rev-parse", "--short", "HEAD"],
                 stderr=subprocess.DEVNULL,
                 timeout=5,
             ).decode().strip()
@@ -101,13 +101,13 @@ class Miner(BaseMinerNeuron):
             repo_root=repo_root,
             implementation_files=[Path(__file__).resolve()],
             defaults={
-                "model_name": "poker44_gen11lgbm",
-                "model_version": "11.0",
-                "framework": "python-lightgbm",
+                "model_name": "poker44_ml1h_gen12",
+                "model_version": "12.0",
+                "framework": "python-sklearn-random-forest",
                 "license": "MIT",
-                "repo_url": "https://github.com/tomkaba/poker44-miner-gen11lgbm",
+                "repo_url": "https://github.com/tomkaba/poker44-miner-gen12ml1h",
                 "repo_commit": git_commit,
-                "notes": "Gen11lgbm LightGBM chunk scorer.",
+                "notes": "Gen12 ml1h-only scorer with fixed ml_gen5_s123467 artifact.",
                 "open_source": True,
                 "inference_mode": "remote",
                 "training_data_statement": "No validator-private data used.",
@@ -143,7 +143,7 @@ class Miner(BaseMinerNeuron):
         scores = []
         routes = []
         for chunk in chunks:
-            score, route = score_chunk_gen11lgbm(chunk)
+            score, route = score_chunk_ml1h_with_route(chunk)
             scores.append(score)
             routes.append(route)
 
@@ -181,7 +181,7 @@ class Miner(BaseMinerNeuron):
             chunks=chunks,
         )
 
-        bt.logging.info(f"Scored {len(chunks)} chunks with gen11lgbm LightGBM scorer.")
+        bt.logging.info(f"Scored {len(chunks)} chunks with ml1h-only scorer.")
         return synapse
 
     @staticmethod
@@ -214,7 +214,7 @@ class Miner(BaseMinerNeuron):
         return allowed
 
     def score_chunk(self, chunk: list[dict]) -> float:
-        return score_chunk_gen11lgbm(chunk)[0]
+        return score_chunk_ml1h_with_route(chunk)[0]
 
     async def blacklist(self, synapse: DetectionSynapse) -> Tuple[bool, str]:
         if synapse.dendrite is None or synapse.dendrite.hotkey is None:
@@ -289,9 +289,9 @@ if __name__ == "__main__":
     _load_env_file()
 
     with Miner() as miner:
-        bt.logging.info("LGBM miner running...")
+        bt.logging.info("ML1H miner running...")
         while True:
             bt.logging.info(
-                f"Miner UID: {miner.uid} | Incentive: {float(miner.metagraph.I[miner.uid])} | Scorer: gen11lgbm"
+                f"Miner UID: {miner.uid} | Incentive: {float(miner.metagraph.I[miner.uid])} | Scorer: ml1h"
             )
             time.sleep(60)

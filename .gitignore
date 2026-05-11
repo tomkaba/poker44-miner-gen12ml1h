@@ -8,7 +8,9 @@ __pycache__/
 logs/
 logs_backup/
 baklogs/
-weights/
+weights/*
+!weights/ml_gen5_s123467_model.pkl
+!weights/ml_gen5_s123467_scaler.pkl
 data/
 analysis/
 *.sh~

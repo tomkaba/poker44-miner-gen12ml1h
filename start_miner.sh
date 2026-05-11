@@ -19,9 +19,9 @@ SESSION_PREFIX="${POKER44_SESSION_PREFIX:-sn126b_m}"
 AXON_BASE_PORT="${POKER44_AXON_BASE_PORT:-12080}"
 VENV_BIN="${POKER44_VENV_BIN:-$REPO/.venv/bin}"
 
-MANIFEST_REPO_URL="${POKER44_MODEL_REPO_URL:-https://github.com/tomkaba/poker44-miner-gen11lgbm}"
+MANIFEST_REPO_URL="${POKER44_MODEL_REPO_URL:-https://github.com/tomkaba/poker44-miner-gen12ml1h}"
 MANIFEST_REPO_COMMIT="${POKER44_MODEL_REPO_COMMIT:-$(git -C "$REPO" rev-parse HEAD 2>/dev/null || true)}"
-MANIFEST_IMPL_FILES="models/benchmark_lgbm_model.pkl,models/benchmark_lgbm_profile.json,neurons/miner.py,poker44/base/miner.py,poker44/base/neuron.py,poker44/miner_heuristics.py,poker44/utils/config.py,poker44/utils/misc.py,poker44/utils/model_manifest.py,poker44/validator/synapse.py"
+MANIFEST_IMPL_FILES="neurons/miner.py,poker44/miner_heuristics.py,weights/ml_gen5_s123467_model.pkl,weights/ml_gen5_s123467_scaler.pkl"
 
 if [[ -f "$ENV_FILE" ]]; then
   set -a
@@ -38,13 +38,18 @@ if [[ ! -x "$VENV_BIN/python" ]]; then
   exit 1
 fi
 
-MANIFEST_IMPL_SHA256="$($VENV_BIN/python - <<'PY' "$REPO" "$MANIFEST_IMPL_FILES"
+MANIFEST_IMPL_SHA256="$($VENV_BIN/python - <<'PY' "$REPO"
 from pathlib import Path
 import hashlib
 import sys
 
 repo_root = Path(sys.argv[1]).resolve()
-files = [f.strip() for f in sys.argv[2].split(',') if f.strip()]
+files = [
+    'neurons/miner.py',
+    'poker44/miner_heuristics.py',
+    'weights/ml_gen5_s123467_model.pkl',
+    'weights/ml_gen5_s123467_scaler.pkl',
+]
 digest = hashlib.sha256()
 for rel in sorted(files):
     p = repo_root / rel
@@ -92,16 +97,13 @@ for raw_id in $(echo "$IDS_STRING" | tr ',' '\n'); do
     cd $REPO
     source $VENV_BIN/activate
     export PYTHONPATH=$REPO:\${PYTHONPATH:-}
-    export POKER44_SINGLE_HAND_MODEL_ALIAS=gen11lgbm
-    export POKER44_CHUNK_SCORER=gen11lgbm
-    export POKER44_GEN11LGBM_PROFILE=$REPO/models/benchmark_lgbm_profile.json
-    export POKER44_GEN11LGBM_MODEL=$REPO/models/benchmark_lgbm_model.pkl
+    export POKER44_CHUNK_SCORER=ml1h
     export POKER44_MODEL_REPO_URL=$MANIFEST_REPO_URL
     export POKER44_MODEL_REPO_COMMIT=$MANIFEST_REPO_COMMIT
     export POKER44_MODEL_IMPLEMENTATION_FILES=$MANIFEST_IMPL_FILES
     export POKER44_MODEL_IMPLEMENTATION_SHA256=$MANIFEST_IMPL_SHA256
     echo '[runtime] HOTKEY_ID=$I'
-    echo '[runtime] CHUNK_SCORER=gen11lgbm'
+    echo '[runtime] CHUNK_SCORER=ml1h'
     echo '[runtime] MANIFEST_SHA256=$MANIFEST_IMPL_SHA256'
     $VENV_BIN/python -m neurons.miner \
       --netuid 126 \

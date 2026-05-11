@@ -1,15 +1,15 @@
-# Poker44-gen11lgbm
+# Poker44-gen12ml1h
 
-Minimal release repository for model gen11lgbm.
+Minimal release repository for model gen12ml1h.
 
-This repo is a standalone miner variant, extracted analogously to gen10heur releases,
-but wired to the LightGBM profile/model artifacts used by gen8lgbm.
+This repo is a standalone miner variant extracted from the main subnet codebase,
+with only ml1h scoring logic enabled.
 
 ## Quick start
 
 ```bash
-git clone https://github.com/tomkaba/poker44-miner-gen11lgbm.git
-cd poker44-miner-gen11lgbm
+git clone https://github.com/tomkaba/poker44-miner-gen12ml1h.git
+cd poker44-miner-gen12ml1h
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
@@ -30,15 +30,15 @@ or legacy wrapper:
 
 ## Implementation
 
-- Scorer: score_chunk_gen11lgbm() in poker44/miner_heuristics.py
+- Scorer: score_chunk_ml1h_with_route() in poker44/miner_heuristics.py
 - Artifacts:
-  - models/benchmark_lgbm_profile.json
-  - models/benchmark_lgbm_model.pkl
+  - weights/ml_gen5_s123467_model.pkl
+  - weights/ml_gen5_s123467_scaler.pkl
 - Entry point: neurons/miner.py
 
 Manifest implementation SHA256 is computed from:
 
 - neurons/miner.py
 - poker44/miner_heuristics.py
-- models/benchmark_lgbm_profile.json
-- models/benchmark_lgbm_model.pkl
+- weights/ml_gen5_s123467_model.pkl
+- weights/ml_gen5_s123467_scaler.pkl
