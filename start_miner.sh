@@ -38,18 +38,18 @@ if [[ ! -x "$VENV_BIN/python" ]]; then
   exit 1
 fi
 
-MANIFEST_IMPL_SHA256="$($VENV_BIN/python - <<'PY' "$REPO"
+MANIFEST_IMPL_SHA256="$($VENV_BIN/python - <<'PY' "$REPO" "$MANIFEST_IMPL_FILES"
 from pathlib import Path
 import hashlib
 import sys
 
 repo_root = Path(sys.argv[1]).resolve()
-files = [
-    'neurons/miner.py',
-    'poker44/miner_heuristics.py',
-    'weights/ml_gen5_s123467_model.pkl',
-    'weights/ml_gen5_s123467_scaler.pkl',
-]
+files_arg = sys.argv[2]
+files = [item.strip() for item in files_arg.split(',') if item.strip()]
+
+if not files:
+  raise SystemExit("MISSING: no manifest implementation files configured")
+
 digest = hashlib.sha256()
 for rel in sorted(files):
     p = repo_root / rel

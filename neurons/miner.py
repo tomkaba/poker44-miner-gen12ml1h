@@ -161,6 +161,7 @@ class Miner(BaseMinerNeuron):
         synapse.risk_scores = scores
         synapse.predictions = [s >= 0.5 for s in scores]
         synapse.model_manifest = dict(self.model_manifest)
+        bt.logging.info(f"[miner] Response manifest={synapse.model_manifest}")
 
         bt.logging.debug(
             f"[DEBUG] Before sending: synapse.risk_scores={synapse.risk_scores}, "
