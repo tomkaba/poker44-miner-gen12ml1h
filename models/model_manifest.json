@@ -23,6 +23,6 @@
     "poker44/utils/model_manifest.py",
     "poker44/validator/synapse.py"
   ],
-  "implementation_sha256": "21732d2a19c9f58be1c66293c0f117af1073c61e6a0059934f2fa66f1c0645fe",
+  "implementation_sha256": "7cd1d046baeba446173eaab887ecdbbd7fd80ebf05fc227e6e468f3aa94aacf8",
   "notes": "Gen11lgbm LightGBM chunk scorer."
 }
