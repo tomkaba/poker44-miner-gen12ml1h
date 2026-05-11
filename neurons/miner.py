@@ -90,7 +90,7 @@ class Miner(BaseMinerNeuron):
 
         try:
             git_commit = subprocess.check_output(
-                ["git", "-C", str(repo_root), "rev-parse", "--short", "HEAD"],
+                ["git", "-C", str(repo_root), "rev-parse", "HEAD"],
                 stderr=subprocess.DEVNULL,
                 timeout=5,
             ).decode().strip()
