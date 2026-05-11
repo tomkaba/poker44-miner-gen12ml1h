@@ -75,7 +75,7 @@ files_arg = sys.argv[2]
 files = [item.strip() for item in files_arg.split(',') if item.strip()]
 
 if not files:
-  raise SystemExit("MISSING: no manifest implementation files configured")
+    raise SystemExit("MISSING: no manifest implementation files configured")
 
 digest = hashlib.sha256()
 for rel in sorted(files):
@@ -83,27 +83,27 @@ for rel in sorted(files):
     if not p.exists():
         raise SystemExit(f"MISSING: {rel}")
 
-  # Use Git-tracked blob bytes when available so implementation SHA is
-  # identical across plain git clones, including LFS-pointer files.
-  file_bytes = None
-  try:
-    file_bytes = subprocess.check_output(
-      ["git", "-C", str(repo_root), "show", f"HEAD:{rel}"],
-      stderr=subprocess.DEVNULL,
-    )
-  except Exception:
+    # Use Git-tracked blob bytes when available so implementation SHA is
+    # identical across plain git clones, including LFS-pointer files.
     file_bytes = None
+    try:
+        file_bytes = subprocess.check_output(
+            ["git", "-C", str(repo_root), "show", f"HEAD:{rel}"],
+            stderr=subprocess.DEVNULL,
+        )
+    except Exception:
+        file_bytes = None
 
     digest.update(rel.encode('utf-8'))
-  if file_bytes is not None:
-    digest.update(file_bytes)
-  else:
-    with p.open('rb') as f:
-      while True:
-        chunk = f.read(1024 * 1024)
-        if not chunk:
-          break
-        digest.update(chunk)
+    if file_bytes is not None:
+        digest.update(file_bytes)
+    else:
+        with p.open('rb') as f:
+            while True:
+                chunk = f.read(1024 * 1024)
+                if not chunk:
+                    break
+                digest.update(chunk)
 print(digest.hexdigest())
 PY
 )"
