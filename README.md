@@ -16,6 +16,13 @@ pip install -r requirements.txt
 pip install -e .
 ```
 
+Model artifact is tracked with Git LFS. On a fresh host run:
+
+```bash
+git lfs install
+git lfs pull --include weights/ml_gen5_s123467_model.pkl
+```
+
 ## Run Miner
 
 ```bash

@@ -22,6 +22,7 @@ VENV_BIN="${POKER44_VENV_BIN:-$REPO/.venv/bin}"
 MANIFEST_REPO_URL="${POKER44_MODEL_REPO_URL:-https://github.com/tomkaba/poker44-miner-gen12ml1h}"
 MANIFEST_REPO_COMMIT="${POKER44_MODEL_REPO_COMMIT:-$(git -C "$REPO" rev-parse HEAD 2>/dev/null || true)}"
 MANIFEST_IMPL_FILES="neurons/miner.py,poker44/miner_heuristics.py,weights/ml_gen5_s123467_model.pkl,weights/ml_gen5_s123467_scaler.pkl"
+MODEL_ARTIFACT_REL="weights/ml_gen5_s123467_model.pkl"
 
 if [[ -f "$ENV_FILE" ]]; then
   set -a
@@ -36,6 +37,31 @@ fi
 if [[ ! -x "$VENV_BIN/python" ]]; then
   echo "ERROR: Python runtime not found at $VENV_BIN/python"
   exit 1
+fi
+
+MODEL_ARTIFACT_PATH="$REPO/$MODEL_ARTIFACT_REL"
+if [[ ! -f "$MODEL_ARTIFACT_PATH" ]]; then
+  echo "ERROR: Missing model artifact: $MODEL_ARTIFACT_REL"
+  exit 1
+fi
+
+# If the model file is still a Git LFS pointer, try to fetch real content.
+if head -n 1 "$MODEL_ARTIFACT_PATH" 2>/dev/null | grep -q "^version https://git-lfs.github.com/spec/v1$"; then
+  echo "[lfs] Detected Git LFS pointer in $MODEL_ARTIFACT_REL"
+  if git -C "$REPO" lfs version >/dev/null 2>&1; then
+    echo "[lfs] Fetching model artifact via git lfs pull..."
+    git -C "$REPO" lfs pull --include "$MODEL_ARTIFACT_REL"
+  else
+    echo "ERROR: git-lfs is not installed on this host."
+    echo "Install git-lfs, then run: git -C $REPO lfs pull --include $MODEL_ARTIFACT_REL"
+    exit 1
+  fi
+
+  if head -n 1 "$MODEL_ARTIFACT_PATH" 2>/dev/null | grep -q "^version https://git-lfs.github.com/spec/v1$"; then
+    echo "ERROR: Model artifact is still an LFS pointer after pull: $MODEL_ARTIFACT_REL"
+    echo "Check git-lfs installation and repository authentication, then retry."
+    exit 1
+  fi
 fi
 
 MANIFEST_IMPL_SHA256="$($VENV_BIN/python - <<'PY' "$REPO" "$MANIFEST_IMPL_FILES"
