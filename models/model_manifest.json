@@ -15,7 +15,7 @@
   "private_data_attestation": "This miner does not train on validator-private human data.",
   "data_attestation": "This miner does not train on validator-private human data.",
   "inference_mode": "remote",
-  "implementation_sha256": "8ab02e95b0b8e6534ebb87e03fc371ce279880570daa08dc2377ae054394eda6",
+  "implementation_sha256": "3ce2e86036bcfae57443634afc1360ad5561b13ae1eb59fa25ea0e353c71b72d",
   "implementation_files": [
     "neurons/miner.py",
     "poker44/__init__.py",
