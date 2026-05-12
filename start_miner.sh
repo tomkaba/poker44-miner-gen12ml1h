@@ -21,7 +21,6 @@ VENV_BIN="${POKER44_VENV_BIN:-$REPO/.venv/bin}"
 
 MANIFEST_REPO_URL="${POKER44_MODEL_REPO_URL:-https://github.com/tomkaba/poker44-miner-gen12ml1h}"
 MANIFEST_REPO_COMMIT="${POKER44_MODEL_REPO_COMMIT:-$(git -C "$REPO" rev-parse HEAD 2>/dev/null || true)}"
-MANIFEST_IMPL_FILES="neurons/miner.py,poker44/miner_heuristics.py,weights/ml_gen5_s123467_model.pkl,weights/ml_gen5_s123467_scaler.pkl"
 MODEL_ARTIFACT_REL="weights/ml_gen5_s123467_model.pkl"
 
 if [[ -f "$ENV_FILE" ]]; then
@@ -64,54 +63,8 @@ if head -n 1 "$MODEL_ARTIFACT_PATH" 2>/dev/null | grep -q "^version https://git-
   fi
 fi
 
-MANIFEST_IMPL_SHA256="$($VENV_BIN/python - <<'PY' "$REPO" "$MANIFEST_IMPL_FILES"
-from pathlib import Path
-import hashlib
-import subprocess
-import sys
-
-repo_root = Path(sys.argv[1]).resolve()
-files_arg = sys.argv[2]
-files = [item.strip() for item in files_arg.split(',') if item.strip()]
-
-if not files:
-    raise SystemExit("MISSING: no manifest implementation files configured")
-
-digest = hashlib.sha256()
-for rel in sorted(files):
-    p = repo_root / rel
-    if not p.exists():
-        raise SystemExit(f"MISSING: {rel}")
-
-    # Use Git-tracked blob bytes when available so implementation SHA is
-    # identical across plain git clones, including LFS-pointer files.
-    file_bytes = None
-    try:
-        file_bytes = subprocess.check_output(
-            ["git", "-C", str(repo_root), "show", f"HEAD:{rel}"],
-            stderr=subprocess.DEVNULL,
-        )
-    except Exception:
-        file_bytes = None
-
-    digest.update(rel.encode('utf-8'))
-    if file_bytes is not None:
-        digest.update(file_bytes)
-    else:
-        with p.open('rb') as f:
-            while True:
-                chunk = f.read(1024 * 1024)
-                if not chunk:
-                    break
-                digest.update(chunk)
-print(digest.hexdigest())
-PY
-)"
-
 echo "[manifest] POKER44_MODEL_REPO_URL=$MANIFEST_REPO_URL"
 echo "[manifest] POKER44_MODEL_REPO_COMMIT=$MANIFEST_REPO_COMMIT"
-echo "[manifest] POKER44_MODEL_IMPLEMENTATION_FILES=$MANIFEST_IMPL_FILES"
-echo "[manifest] POKER44_MODEL_IMPLEMENTATION_SHA256=$MANIFEST_IMPL_SHA256"
 
 for raw_id in $(echo "$IDS_STRING" | tr ',' '\n'); do
   I="$(echo "$raw_id" | tr -d ' ')"
@@ -142,11 +95,8 @@ for raw_id in $(echo "$IDS_STRING" | tr ',' '\n'); do
     export POKER44_CHUNK_SCORER=ml1h
     export POKER44_MODEL_REPO_URL=$MANIFEST_REPO_URL
     export POKER44_MODEL_REPO_COMMIT=$MANIFEST_REPO_COMMIT
-    export POKER44_MODEL_IMPLEMENTATION_FILES=$MANIFEST_IMPL_FILES
-    export POKER44_MODEL_IMPLEMENTATION_SHA256=$MANIFEST_IMPL_SHA256
     echo '[runtime] HOTKEY_ID=$I'
     echo '[runtime] CHUNK_SCORER=ml1h'
-    echo '[runtime] MANIFEST_SHA256=$MANIFEST_IMPL_SHA256'
     $VENV_BIN/python -m neurons.miner \
       --netuid 126 \
       --wallet.name $WALLET_NAME \

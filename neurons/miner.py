@@ -95,11 +95,23 @@ class Miner(BaseMinerNeuron):
                 timeout=5,
             ).decode().strip()
         except Exception:
-            git_commit = os.getenv("POKER44_MODEL_REPO_COMMIT", "")
+            git_commit = ""
 
         self.model_manifest = build_local_model_manifest(
             repo_root=repo_root,
-            implementation_files=[Path(__file__).resolve()],
+            implementation_files=[
+                repo_root / "weights" / "ml_gen5_s123467_model.pkl",
+                repo_root / "weights" / "ml_gen5_s123467_scaler.pkl",
+                Path(__file__).resolve(),
+                repo_root / "poker44" / "__init__.py",
+                repo_root / "poker44" / "base" / "miner.py",
+                repo_root / "poker44" / "base" / "neuron.py",
+                repo_root / "poker44" / "miner_heuristics.py",
+                repo_root / "poker44" / "utils" / "config.py",
+                repo_root / "poker44" / "utils" / "misc.py",
+                repo_root / "poker44" / "utils" / "model_manifest.py",
+                repo_root / "poker44" / "validator" / "synapse.py",
+            ],
             defaults={
                 "model_name": "poker44_ml1h_gen12",
                 "model_version": "12.0",

@@ -1,0 +1,33 @@
+{
+  "schema_version": "1",
+  "open_source": true,
+  "model_name": "poker44_ml1h_gen12",
+  "model_version": "12.0",
+  "framework": "python-sklearn-random-forest",
+  "license": "MIT",
+  "repo_url": "https://github.com/tomkaba/poker44-miner-gen12ml1h",
+  "repo_commit": "88f195293fbac07e257c280614327b1609b5a344",
+  "artifact_url": "",
+  "artifact_sha256": "",
+  "model_card_url": "",
+  "training_data_statement": "No validator-private data used.",
+  "training_data_sources": [],
+  "private_data_attestation": "This miner does not train on validator-private human data.",
+  "data_attestation": "This miner does not train on validator-private human data.",
+  "inference_mode": "remote",
+  "implementation_sha256": "8ab02e95b0b8e6534ebb87e03fc371ce279880570daa08dc2377ae054394eda6",
+  "implementation_files": [
+    "neurons/miner.py",
+    "poker44/__init__.py",
+    "poker44/base/miner.py",
+    "poker44/base/neuron.py",
+    "poker44/miner_heuristics.py",
+    "poker44/utils/config.py",
+    "poker44/utils/misc.py",
+    "poker44/utils/model_manifest.py",
+    "poker44/validator/synapse.py",
+    "weights/ml_gen5_s123467_model.pkl",
+    "weights/ml_gen5_s123467_scaler.pkl"
+  ],
+  "notes": "Gen12 ml1h-only scorer with fixed ml_gen5_s123467 artifact."
+}
